@@ -1,3 +1,6 @@
 .DS_Store
 .env
 *.local
+
+# Собираются локально: scripts/md-to-pdf.sh
+docs/integrations/*.pdf
