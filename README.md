@@ -12,6 +12,3 @@
 
 - [Точка.API — выписки, вебхуки, scopes](./docs/integrations/tochka-api-for-ledger.md)
 - [Яндекс Маркет Partner API — заказы, отчёты, уведомления](./docs/integrations/yandex-market-api-for-ledger.md)
-
-PDF из этих файлов (локально, после `brew install pandoc tectonic`): `./scripts/md-to-pdf.sh` — результат в `docs/integrations/*.pdf` (в git не коммитится).
-
