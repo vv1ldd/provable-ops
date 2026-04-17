@@ -21,7 +21,7 @@
 
 | Наш payload  | Поле выписки / API                        | Примечание                                                                                                               |
 | ------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `bank_tx_id` | *(из JSON выписки — уточнить по OpenAPI)* | Должен совпадать с `**paymentId`** из JWT вебхука `incomingPayment` / `outgoingPayment`, если дока банка это гарантирует |
+| `bank_tx_id` | *(из JSON выписки — уточнить по OpenAPI)* | Должен совпадать с **paymentId** из JWT вебхука `incomingPayment` / `outgoingPayment`, если дока банка это гарантирует |
 | `amount`     | `amount` / `amountNat`                    | `amount` — в валюте счёта; `amountNat` — в RUB по курсу ЦБ                                                               |
 | `purpose`    | назначение платежа в теле операции        | Для мэтча с выплатой маркетплейса                                                                                        |
 | `direction`  | `creditDebitIndicator`                    | `credit` → `BANK_IN`, `debit` → `BANK_OUT`                                                                               |
@@ -29,13 +29,18 @@
 
 **Точка (Tochka):** выжимка и ссылки на методы — [docs/integrations/tochka-api-for-ledger.md](../../docs/integrations/tochka-api-for-ledger.md). Точные имена полей строки выписки — из ответа **Get Statement** в актуальной версии OpenAPI.
 
-## Поставщик
+## Поставщик (EZ PIN / EZPayPin)
 
+Сводка: [docs/integrations/ezpaypin-api-for-ledger.md](../../docs/integrations/ezpaypin-api-for-ledger.md). Полная OpenAPI-выжимка может храниться отдельным файлом `ezpaypin-openapi-v2.0.2-reference.md` у вас в монорепо.
 
-| Наш payload   | Поле API | Примечание |
-| ------------- | -------- | ---------- |
-| `delivery_id` |          |            |
-| `product_id`  |          |            |
-| `unit_price`  |          |            |
+| Наш payload        | Поле API (POST `/orders/`) | Примечание                                      |
+| ------------------ | -------------------------- | ----------------------------------------------- |
+| `supplier_tx`      | ответ Order (id, время)  | Имя поля — из схемы `Order` в OpenAPI           |
+| `product_id`       | `sku`                      | Каталожный SKU                                  |
+| `unit_price`       | `price`                    | Должен быть согласован с каталогом              |
+| `qty`              | `quantity`                 |                                                 |
+| `redemption_link`  | `reference_code`         | Ваш UUID v4 — связка с `INT_VOUCHER_REDEEMED`   |
+| `delivery_channel` | `delivery_type`          | 0 none / 1 email / 2 SMS / 3 WhatsApp           |
+| `delivery_ref`     | `destination`            | В Merkle не класть plaintext; только хэш/факт  |
 
 
