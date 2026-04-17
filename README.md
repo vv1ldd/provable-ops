@@ -7,3 +7,8 @@
 ### Кейсы
 
 - [УСН «доходы» + маркетплейс + цифровой поставщик](./cases/usn-marketplace-digital/README.md) — первый детерминированный журнал на трёх API.
+
+### Интеграции (выжимки под леджер)
+
+- [Точка.API — выписки, вебхуки, scopes](./docs/integrations/tochka-api-for-ledger.md)
+
