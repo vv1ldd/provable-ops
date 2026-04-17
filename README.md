@@ -13,3 +13,7 @@
 - [Точка.API — выписки, вебхуки, scopes](./docs/integrations/tochka-api-for-ledger.md)
 - [Яндекс Маркет Partner API — заказы, отчёты, уведомления](./docs/integrations/yandex-market-api-for-ledger.md)
 - [EZ PIN / EZPayPin API — цифровые карты (поставщик)](./docs/integrations/ezpaypin-api-for-ledger.md)
+
+### Проверка доступа к API
+
+Скрипт без зависимостей: [scripts/ingestion/smoke_fetch.py](./scripts/ingestion/smoke_fetch.py) — OAuth Точки (или готовый токен) и список счетов, заказы Маркета за 7 дней, EZ PIN баланс + последние заказы. Шаблон переменных: [scripts/ingestion/.env.example](./scripts/ingestion/.env.example).
