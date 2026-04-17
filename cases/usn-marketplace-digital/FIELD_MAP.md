@@ -2,15 +2,17 @@
 
 Скопируй сюда **имена полей** из реальных ответов API (без токенов и персональных данных).
 
-## Маркетплейс
+## Маркетплейс (Яндекс)
+
+Сводка методов и отчётов: [docs/integrations/yandex-market-api-for-ledger.md](../../docs/integrations/yandex-market-api-for-ledger.md).
 
 | Наш payload | Поле API | Примечание |
 |-------------|-----------|------------|
-| `order_id` | | |
-| `gross_amount` | | |
-| `payout_id` | | |
-| `commission` | | |
-| `net_to_seller` | | |
+| `order_id` | `orderId` (POST `v1/businesses/.../orders`) | Плюс уведомления `ORDER_*` |
+| `gross_amount` | из позиций заказа / отчёта по заказам | Уточнить по выбранному отчёту |
+| `payout_id` / batch | из отчёта по платежам `united-netting` | См. `TRANSACTION_ID`, период, `BANK_ORDER_*` |
+| `commission` | услуги Маркета в отчётах | Листы услуг / маржа |
+| `net_to_seller` | суммы к выплате в отчёте по платежам | Сверка с `BANK_IN` |
 
 ## Банк
 
