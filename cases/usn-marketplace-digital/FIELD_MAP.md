@@ -47,16 +47,18 @@
 
 ## Прокси и маппинг SKU (Маркет ↔ ключ прокси ↔ EZ PIN)
 
-В **API Яндекса** в заказе приходит **ваш** SKU (как на витрине: `shopSku` и т.п.). **API прокси** ([Wildflow](https://github.com/vv1ldd/api-wildflow-dev) и аналоги) принимает **тот же** идентификатор как поле **`sku`** в таблицах `catalogs` / `retailer_catalogs` — это **ключ** к строке маппинга и дальше к заказам у EZ PIN (`service_sku` в БД прокси → поле `sku` / `product_code` в запросе к EZ PIN).
+Подробно по **исходному коду** Wildflow (без догадок по БД): [docs/integrations/wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md).
 
-Итого по смыслу: **`sku_marketplace` ≈ ключ прокси** (одна строка в бизнесе, если вы не вводите второй внутренний артикул). В журнале всё равно кладём оба имени поля, если в коде ingestion они разведены; иначе в каноне достаточно одного значения в двух ключах или только `sku_internal` с комментарием «= shopSku Маркета» — зафиксировать в `rules_version`.
+Кратко: в репозитории прокси **нет** функции «SKU EZ → SKU Яндекса». Есть только **`catalogs.sku` (ключ партнёра) → `service_sku` → запрос к EZ PIN** (`PartnersController::getServiceSku`). Команды `service:parse-catalog` / `service:parse-retailer-catalog` при первом импорте ставят **`catalogs.sku` = `Str::random()`**; связь с Маркетом достигается **процессом** (вручную в Filament или своим скриптом: выставить `shopSku` = этому `sku`, либо поменять парсер).
+
+**`sku_marketplace`** (например `shopSku` в заказе Маркета) у вас в норме **должен совпасть** с **`catalogs.sku`**, если вы так завели витрину — но это **не выводится** из кода EZ, а задаётся вами.
 
 Для листьев Merkle в канонический `payload` событий (см. [SPEC.md §2.3b](./SPEC.md)) входят как минимум:
 
 | Поле журнала        | Смысл | Пример / источник |
 | ------------------- | ----- | ------------------ |
-| `sku_internal`      | Ключ в прокси (колонка `catalogs.sku` / `retailer_catalogs.sku`) | Тот же SKU, что вы отдаёте в API партнёрам и видите в заказе МП |
-| `sku_marketplace`   | Как в ответе Partner API по заказу | Обычно **то же значение**, что `sku_internal` |
+| `sku_internal`      | Колонка `catalogs.sku` / `retailer_catalogs.sku` в прокси | Ключ в API партнёра; после импорта из EZ может быть **случайной** строкой, пока не выровняете под Маркет |
+| `sku_marketplace`   | `shopSku` / заказ Маркета | Совпадает с `sku_internal`, если вы так завели оффер |
 | `sku_supplier`      | `service_sku` → уходит в EZ PIN как `sku` / `product_code` | Из строки каталога прокси |
 | `sku_map_version`   | Версия таблицы соответствий | Git SHA / semver / хэш снимка каталога прокси |
 

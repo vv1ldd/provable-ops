@@ -62,7 +62,7 @@
 - на Маркете у того же товара другой идентификатор (**`sku_marketplace`**);  
 - в учёте у вас **`sku_internal`** и таблица соответствий с версией **`sku_map_version`**.
 
-Для Merkle/commitment в `SUP_PURCHASE` (и в связанных `MP_ORDER` / internal) в **`payload_canonical`** должны входить **`sku_internal`**, **`sku_map_version`**, **`sku_supplier`**; **`sku_marketplace`** — если известен из заказа Маркета. Сырой URL прокси и секреты в канон не включаются. Подробнее: [cases/usn-marketplace-digital/SPEC.md](../../cases/usn-marketplace-digital/SPEC.md) §2.3b и [FIELD_MAP.md](../../cases/usn-marketplace-digital/FIELD_MAP.md).
+Для Merkle/commitment в `SUP_PURCHASE` (и в связанных `MP_ORDER` / internal) в **`payload_canonical`** должны входить **`sku_internal`**, **`sku_map_version`**, **`sku_supplier`**; **`sku_marketplace`** — если известен из заказа Маркета. Сырой URL прокси и секреты в канон не включаются. Подробнее: [cases/usn-marketplace-digital/SPEC.md](../../cases/usn-marketplace-digital/SPEC.md) §2.3b, [FIELD_MAP.md](../../cases/usn-marketplace-digital/FIELD_MAP.md), по коду прокси Wildflow — [wildflow-proxy-sku-flow.md](./wildflow-proxy-sku-flow.md).
 
 ---
 

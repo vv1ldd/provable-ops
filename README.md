@@ -13,6 +13,7 @@
 - [Точка.API — выписки, вебхуки, scopes](./docs/integrations/tochka-api-for-ledger.md)
 - [Яндекс Маркет Partner API — заказы, отчёты, уведомления](./docs/integrations/yandex-market-api-for-ledger.md)
 - [EZ PIN / EZPayPin API — цифровые карты (поставщик)](./docs/integrations/ezpaypin-api-for-ledger.md)
+- [Wildflow — как по коду `sku` прокси ↔ `service_sku` EZ (и почему это не «SKU Маркета из EZ»)](./docs/integrations/wildflow-proxy-sku-flow.md)
 
 ### Проверка доступа к API
 
