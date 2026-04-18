@@ -16,4 +16,4 @@
 
 ### Проверка доступа к API
 
-Скрипт без зависимостей: [scripts/ingestion/smoke_fetch.py](./scripts/ingestion/smoke_fetch.py) — OAuth Точки (или готовый токен) и список счетов, заказы Маркета за 7 дней, EZ PIN баланс + последние заказы. Шаблон переменных: [scripts/ingestion/.env.example](./scripts/ingestion/.env.example).
+Скрипт без зависимостей: [scripts/ingestion/smoke_fetch.py](./scripts/ingestion/smoke_fetch.py) — `all`: OAuth Точки (или готовый токен) и счета, заказы Маркета за 7 дней, EZ PIN баланс + заказы; `ledger`: то же плюс **выписка** Точки (`TOCHKA_ACCOUNT_ID`), **отчёт по платежам** united-netting (скачивание в `scripts/ingestion/out/`), опционально каталог EZ PIN. Шаблон: [scripts/ingestion/.env.example](./scripts/ingestion/.env.example).
