@@ -1,6 +1,11 @@
-# Wildflow (`api-wildflow-dev`) — как по коду связаны SKU EZ PIN и запрос партнёра
+# Wildflow + Marketplace — как по коду связаны EZ PIN, прокси и `offerId` Яндекса
 
-Репозиторий: [vv1ldd/api-wildflow-dev](https://github.com/vv1ldd/api-wildflow-dev). В нём **нет** вызовов API Яндекс Маркета и **нет** функции «перевести SKU источника в SKU маркетплейса». Связка с Маркетом — **внешний процесс** (вы заводите `shopSku` = тому `sku`, под которым строка лежит в прокси).
+Репозитории:
+
+- [vv1ldd/api-wildflow-dev](https://github.com/vv1ldd/api-wildflow-dev) — прокси EZ PIN (`catalogs` / `retailer_catalogs`).  
+- [vv1ldd/marketplace](https://github.com/vv1ldd/marketplace) — импорт каталога с **продакшен** API `api.wildflow.dev`, **генерация** строки для поля **`offerId`** / `shopSku` в Яндекс Маркете и выгрузка офферов (`Ym\MainController::sendItemsWildflow`).
+
+В `api-wildflow-dev` **нет** вызовов Partner API Яндекса. Генерация человекочитаемого SKU для Маркета живёт в **`marketplace`** (`WildflowParser::skuGenerator`).
 
 ---
 
@@ -34,25 +39,53 @@
 
 Источник: `app/Console/Commands/ParseRetailerCatalog.php`.
 
-**Итог по коду:** стабильная связь с API источника (EZ) — поле **`service_sku`** в БД прокси. Поле **`sku`** в БД — **ключ для партнёрского API**; после парсинга оно **случайное**, пока вы не перезапишите его (например в Filament: `CatalogResource` / `RetailerCatalogResource`) на **`shopSku`**, который вы завели на Маркете.
+**Итог по коду:** стабильная связь с API источника (EZ) — поле **`service_sku`** в БД прокси. Поле **`sku`** в БД — **ключ для партнёрского API**; после парсинга оно **случайное**, пока вы не перезапишите его в Filament. **Если офферы в Яндекс грузите через репозиторий `marketplace`**, на витрину уходит **не** этот `sku`, а строка из `skuGenerator` (см. §3).
 
 ---
 
-## 3. Что это значит для «SKU маркетплейса»
+## 3. Репозиторий `marketplace`: ответ Wildflow → строка для Яндекса
 
-| Смысл | Где живёт | Как совпадает с Маркетом |
-|--------|-----------|---------------------------|
-| SKU в заказе Яндекса (`shopSku`) | Partner API Маркета | Должен **вручную/процессом** совпасть с **`catalogs.sku`**, если вы хотите без второй таблицы |
-| SKU в запросе к прокси | тело `sku` у партнёра | = `catalogs.sku` |
-| SKU у EZ в заказе | `service_sku` в БД → поле в запросе к EZ | = `item['sku']` / `product_code` из каталога EZ |
+Команда **`app:wildflow-parser`** (по расписанию hourly в `routes/console.php`) дергает продакшен:
 
-Автоматического преобразования «EZ → Яндекс» в репозитории **нет**; есть только **«ваш sku строки каталога → service_sku → EZ»**.
+`GET https://api.wildflow.dev/api/v1/partners/catalog?type=retailer_catalog|catalog`
+
+и делает `WildflowCatalog::upsert` в таблицу **`wildflow_catalogs`**.
+
+**Важно про имена колонок в БД `marketplace` (они путают с EZ):**
+
+| Колонка `wildflow_catalogs` | Что кладёт код | Соответствие `api-wildflow-dev` |
+|----------------------------|----------------|----------------------------------|
+| **`service_sku`** | `$item['sku']` из JSON ответа Wildflow | Это **`sku` партнёра** в прокси (`catalogs.sku`), **не** числовой SKU EZ в смысле колонки `service_sku` Wildflow |
+| **`sku`** | `skuGenerator($data, $type)` | **Идентификатор оффера для Яндекса** (`offerId` / фактический `shopSku` в потоке Маркета) |
+
+`skuGenerator` (файл `app/Console/Commands/WildflowParser.php`):
+
+- **`retailer_catalog`:** `VOUCHER-GC-{нормализованный_title}-{region}-{price}{currency}-RTL-{product.sku}`  
+- **`catalog`:** `VOUCHER-GC-{title}-{region}-{max_price}{currency}-CTLG-{data.sku}`  
+
+То есть в строку для Маркета **вшиваются** поля из **`data`** (ответ/кэш каталога EZ: валюта, регион, числовой `sku` товара у поставщика и т.д.) + **ключ партнёра** хранится отдельно в колонке с именем `service_sku`.
+
+Импорт офферов в Маркет: `Ym\MainController::sendItemsWildflow` — в теле импорта **`"offerId" => $item->sku`**, т.е. в Яндекс уходит **сгенерированная** строка `VOUCHER-GC-…`, а не случайный `Str::random()` из прокси.
 
 ---
 
-## 4. Для леджера `provable-ops`
+## 4. Сводная таблица «кто что называет sku»
 
-- В событиях храните **`sku_supplier`** (= `service_sku`), **`sku_internal`** (= `catalogs.sku` = ключ партнёра и, при вашем процессе, = `shopSku`), **`sku_map_version`**.  
-- Если меняете `catalogs.sku` в админке под Маркет — версионируйте снимок каталога.
+| Смысл для леджера | `api-wildflow-dev` | `marketplace.wildflow_catalogs` | Яндекс Partner API |
+|-------------------|--------------------|----------------------------------|----------------------|
+| Ключ вызова прокси / партнёра | `catalogs.sku` | колонка **`service_sku`** (хранит `item['sku']` из API) | — |
+| SKU в заказе / оффере Маркета | — | колонка **`sku`** (`skuGenerator`) | `shopSku` / `offerId` |
+| SKU у EZ в `POST /orders/` | `catalogs.service_sku` | внутри `data` (напр. `product.sku`, `product_code`) | — |
 
-*Документ: wildflow-sku-flow-0.1.0 (по состоянию кода на просмотр репозитория).*
+Заказ Маркета по позиции ссылается на **`sku` из п.2** (строка `VOUCHER-GC-…`). Заказ у поставщика через прокси — по **`catalogs.sku`**, который в `marketplace` лежит в колонке **`service_sku`**.
+
+---
+
+## 5. Для леджера `provable-ops`
+
+- **`sku_marketplace`:** значение из заказа Маркета = обычно строка **`VOUCHER-GC-…`** из `marketplace.wildflow_catalogs.sku`.  
+- **`sku_internal` / ключ прокси:** `marketplace.wildflow_catalogs.service_sku` = `api-wildflow-dev.catalogs.sku` (партнёрский ключ).  
+- **`sku_supplier`:** числовой/строковый идентификатор EZ из данных каталога и маппинга прокси (`api-wildflow-dev.catalogs.service_sku` → поле в запросе к EZ).  
+- **`sku_map_version`:** версия снимка **`wildflow_catalogs`** + версия каталога прокси (или хэш строки `skuGenerator` при смене правил).
+
+*Документ: wildflow-sku-flow-0.2.0 (добавлен репозиторий `marketplace`).*

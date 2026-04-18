@@ -1,7 +1,7 @@
 # SPEC: детерминированный журнал (УСН доходы · маркетплейс · цифровые товары)
 
-**Версия:** `rules_version = usn-mp-digital-0.2.4`  
-**Статус:** черновик под первую реализацию (обновлено под фактический флоу: ваучер → маркетплейс → баланс → обмен → поставщик → email; выплата пачкой на расчётный счёт). **0.2.1** — ретроспектива. **0.2.2–0.2.3** — прокси и SKU в каноне. **0.2.4** — по коду Wildflow: **автопреобразования EZ→МП нет**; `catalogs.sku` задаётся партнёру, `service_sku` — мост к EZ; выравнивание с `shopSku` — вне кода парсера (см. [wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md)).
+**Версия:** `rules_version = usn-mp-digital-0.2.5`  
+**Статус:** черновик под первую реализацию (обновлено под фактический флоу: ваучер → маркетплейс → баланс → обмен → поставщик → email; выплата пачкой на расчётный счёт). **0.2.1** — ретроспектива. **0.2.2–0.2.4** — прокси и SKU в каноне; уточнение по `api-wildflow-dev`. **0.2.5** — репозиторий **`marketplace`**: генерация **`VOUCHER-GC-…`** для `offerId` Яндекса из данных Wildflow/EZ; перекрёстные имена колонок `wildflow_catalogs` (см. [wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md)).
 
 ---
 
@@ -108,7 +108,7 @@
 
 ### 2.3b Прокси к EZ PIN и маппинг SKU
 
-Запросы к API EZ PIN выполняет **ваш прокси** (Wildflow и аналоги): по **ключу партнёра** `catalogs.sku` (или `retailer_catalogs.sku`) находится **`service_sku`**, который уходит в EZ как их `sku` / `product_code`. В репозитории Wildflow **нет** логики «перевести SKU из API источника в SKU для API маркетплейса»; импорт из EZ (`ParseCatalog` / `ParseRetailerCatalog`) при создании строки задаёт **`sku` случайным `Str::random()`**, а **`service_sku`** берётся из ответа EZ. Совпадение **`shopSku` Маркета** с **`catalogs.sku`** — **ваш операционный шаг** (Filament, отдельный скрипт или изменение парсера). Подробнее: [wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md).
+Запросы к API EZ PIN выполняет **прокси** (`api-wildflow-dev`): по **`catalogs.sku`** находится **`service_sku`** → EZ. Отдельно репозиторий **`marketplace`** тянет каталог с `api.wildflow.dev`, строит строку **`skuGenerator` → `offerId` Яндекса** (`VOUCHER-GC-…`) и хранит её в **`wildflow_catalogs.sku`**, а ключ партнёра Wildflow — в колонке **`wildflow_catalogs.service_sku`** (имя колонки не совпадает с смыслом «service у EZ»). Детали и таблица соответствий: [wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md).
 
 Для детерминированного журнала это означает:
 
@@ -181,7 +181,7 @@
 
 - `order_id` / `offer_id` ↔ `voucher_id` (ваш UUID) — в вашей БД;  
 - `INT_VOUCHER_REDEEMED` ↔ `SUP_PURCHASE` по `voucher_id` или `redemption_id`;  
-- **Тройка SKU:** `sku_marketplace` (из заказа/оффера Маркета) ↔ **`sku_internal`** (= `catalogs.sku` прокси) ↔ **`sku_supplier`** (= `service_sku` → поле `sku` / `product_code` в EZ) и **`sku_map_version`** (§2.3b, `FIELD_MAP.md`, [wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md)); сверка цепочки без совпадения версии маппинга в событиях → предупреждение или отказ `MATCH`.
+- **Тройка SKU:** `sku_marketplace` (часто **`VOUCHER-GC-…`** / `offerId` из [marketplace](https://github.com/vv1ldd/marketplace)) ↔ **`sku_internal`** (ключ партнёра: `api-wildflow-dev.catalogs.sku` = `marketplace.wildflow_catalogs.service_sku`) ↔ **`sku_supplier`** (EZ) и **`sku_map_version`** (§2.3b, `FIELD_MAP.md`, [wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md)); сверка цепочки без совпадения версии маппинга в событиях → предупреждение или отказ `MATCH`.
 
 ### 5.4 Пачка на расчётный счёт: `MP_PAYOUT` (сумма заказов) ↔ одна `BANK_IN`
 
@@ -195,7 +195,7 @@
 
 ## 6. УСН «доходы» (rollup в журнале)
 
-На `rules_version = usn-mp-digital-0.2.4`:
+На `rules_version = usn-mp-digital-0.2.5`:
 
 - В квартальный `USN_PERIOD_ROLLUP` попадают только события, помеченные как **«доход для УСН»** согласно таблице в правилах (например: **зачисление от маркетплейса** после `MATCH` с `MP_PAYOUT`; или **выручка по заказам** — **не оба**, выбрать одно и зафиксировать).  
 - Ставка УСН (например 6%) хранится как константа в правилах на период (ставка может меняться — только через новый `rules_version`).

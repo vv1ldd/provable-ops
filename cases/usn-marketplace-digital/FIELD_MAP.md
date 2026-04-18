@@ -14,7 +14,7 @@
 | `payout_id` / batch | из отчёта по платежам `united-netting`      | См. `TRANSACTION_ID`, период, `BANK_ORDER_*` |
 | `commission`        | услуги Маркета в отчётах                    | Листы услуг / маржа                          |
 | `net_to_seller`     | суммы к выплате в отчёте по платежам        | Сверка с `BANK_IN`                           |
-| `sku_marketplace`   | `shopSku` / offer / позиция заказа          | **Ваш** SKU в потоке Маркета (как завели оффер); при единой политике именования **совпадает** с ключом в прокси |
+| `sku_marketplace`   | `shopSku` / `offerId` в заказе              | При выгрузке из [marketplace](https://github.com/vv1ldd/marketplace) — строка **`VOUCHER-GC-…`** из `WildflowParser::skuGenerator`; см. [wildflow-proxy-sku-flow.md §3–4](../../docs/integrations/wildflow-proxy-sku-flow.md) |
 
 
 ## Банк
@@ -49,16 +49,14 @@
 
 Подробно по **исходному коду** Wildflow (без догадок по БД): [docs/integrations/wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md).
 
-Кратко: в репозитории прокси **нет** функции «SKU EZ → SKU Яндекса». Есть только **`catalogs.sku` (ключ партнёра) → `service_sku` → запрос к EZ PIN** (`PartnersController::getServiceSku`). Команды `service:parse-catalog` / `service:parse-retailer-catalog` при первом импорте ставят **`catalogs.sku` = `Str::random()`**; связь с Маркетом достигается **процессом** (вручную в Filament или своим скриптом: выставить `shopSku` = этому `sku`, либо поменять парсер).
-
-**`sku_marketplace`** (например `shopSku` в заказе Маркета) у вас в норме **должен совпасть** с **`catalogs.sku`**, если вы так завели витрину — но это **не выводится** из кода EZ, а задаётся вами.
+Кратко: в **`api-wildflow-dev`** только **`catalogs.sku` → `service_sku` → EZ**. В **`marketplace`** по коду строится **отдельная** строка для Яндекса (`skuGenerator` → колонка `wildflow_catalogs.sku` → `offerId` в импорте). Имена колонок в `marketplace` **перекрёстны** с прокси: там **`service_sku`** хранит ключ партнёра (`item['sku']` из API Wildflow), а **`sku`** — оффер для Маркета. Подробно: [wildflow-proxy-sku-flow.md](../../docs/integrations/wildflow-proxy-sku-flow.md).
 
 Для листьев Merkle в канонический `payload` событий (см. [SPEC.md §2.3b](./SPEC.md)) входят как минимум:
 
 | Поле журнала        | Смысл | Пример / источник |
 | ------------------- | ----- | ------------------ |
-| `sku_internal`      | Колонка `catalogs.sku` / `retailer_catalogs.sku` в прокси | Ключ в API партнёра; после импорта из EZ может быть **случайной** строкой, пока не выровняете под Маркет |
-| `sku_marketplace`   | `shopSku` / заказ Маркета | Совпадает с `sku_internal`, если вы так завели оффер |
+| `sku_internal`      | `api-wildflow-dev`: `catalogs.sku`; **`marketplace`**: колонка `wildflow_catalogs.service_sku` | Ключ партнёра / прокси (в БД marketplace имя колонки вводит в заблуждение) |
+| `sku_marketplace`   | `shopSku` / `offerId` в заказе Маркета | Часто **`VOUCHER-GC-…`** из `marketplace.wildflow_catalogs.sku` |
 | `sku_supplier`      | `service_sku` → уходит в EZ PIN как `sku` / `product_code` | Из строки каталога прокси |
 | `sku_map_version`   | Версия таблицы соответствий | Git SHA / semver / хэш снимка каталога прокси |
 
