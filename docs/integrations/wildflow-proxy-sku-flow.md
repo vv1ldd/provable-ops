@@ -88,4 +88,13 @@
 - **`sku_supplier`:** числовой/строковый идентификатор EZ из данных каталога и маппинга прокси (`api-wildflow-dev.catalogs.service_sku` → поле в запросе к EZ).  
 - **`sku_map_version`:** версия снимка **`wildflow_catalogs`** + версия каталога прокси (или хэш строки `skuGenerator` при смене правил).
 
-*Документ: wildflow-sku-flow-0.2.0 (добавлен репозиторий `marketplace`).*
+## 6. HTTP API леджера на стороне `marketplace`
+
+В [vv1ldd/marketplace](https://github.com/vv1ldd/marketplace) добавлены read-only эндпоинты (тот же Bearer-токен `ApiApplication`, что и у `/api/redeem/*`):
+
+- **`GET /api/ledger/catalog-map`** — снимок маппинга `sku_marketplace` / `sku_proxy_key` / `sku_supplier` + версия строки.  
+- **`GET /api/ledger/redeem-events`** — пагинация по `order_items` с флагами redeem/activate и безопасным контактом (без паролей из `client_info`).
+
+Описание параметров: [marketplace/docs/LEDGER_API.md](https://github.com/vv1ldd/marketplace/blob/master/docs/LEDGER_API.md).
+
+*Документ: wildflow-sku-flow-0.3.0 (добавлен Ledger HTTP API на marketplace).*
